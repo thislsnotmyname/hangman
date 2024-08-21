@@ -1,20 +1,36 @@
-# JM, 08/18/2024
+require_relative 'game/serializable'
+require_relative 'game/commandable'
+require_relative 'inputtable'
+# JM, 08/21/2024
 #
 # This class handles the flow of the game.
 class Game
-  def initialize
-    @secret_word = File.readlines('10000_words.txt').filter { |word| word.chomp.length.between?(5, 12) }.sample.chomp
-    @incorrect_guesses = []
-    @correct_parts = ('_' * @secret_word.length).split('')
+  include Commandable
+  include Serializable
+  include Inputtable
 
-    puts 'Guess the secret word: '
+  attr_reader :correct_parts, :incorrect_guesses
+
+  def initialize(loaded = {})
+    @file = loaded[:file] || :new_game
+    @secret_word = loaded[:@secret_word] ||
+                   File.readlines('10000_words.txt').filter { |word| word.chomp.length.between?(5, 12) }.sample.chomp
+
+    @incorrect_guesses = loaded[:@incorrect_guesses] || []
+    @correct_parts = loaded[:@correct_parts] || ('_' * @secret_word.length).split('')
+
     game_loop
   end
 
   def game_loop
+    puts 'Guess the secret word: '
     display
     while @incorrect_guesses.length < 7
-      check(player_input)
+      input = player_input
+
+      return end_game(input) if input.instance_of?(Symbol)
+
+      check input unless input.nil?
       display
       return win('Human') unless @correct_parts.any? '_'
     end
@@ -23,22 +39,25 @@ class Game
 
   def display
     puts '  ' << @correct_parts.join(' ')
-    puts "Incorrect letters: #{@incorrect_guesses.join(' ')} | Chances: #{7 - @incorrect_guesses.length}"
+    puts "Incorrect letters: #{@incorrect_guesses.join(' ')} | Chances left: #{7 - @incorrect_guesses.length}"
+    print 'Guess a letter (Type .help to list commands): '
   end
 
   def player_input
-    loop do
-      input = gets.chomp
+    while (input = gets.chomp)
+      break if input.match?(/[a-zA-Z.]/) && !@incorrect_guesses.include?(input) && !@correct_parts.include?(input)
 
-      if input.start_with? '!'
-        # return inputted_command(input)
-      elsif input.length == 1 && input.match?(/[a-zA-Z]/) && !@incorrect_guesses.include?(input)
-        return input
-      else
-        print "\e[1A\e[2K"
-      end
+      delete_input
     end
+    return inputted_command(input) if input.start_with? '.'
+
+    input[0]
   end
+
+  private
+
+  attr_reader :secret_word, :file
+  attr_writer :correct_parts, :incorrect_guesses
 
   def check(player_input)
     return @incorrect_guesses << player_input unless @secret_word.match?(player_input.downcase)
@@ -49,12 +68,17 @@ class Game
     @correct_parts
   end
 
-  private
-
-  attr_reader :secret_word
+  def end_game(reason)
+    File.delete(@file) if @file != :new_game && %i[menu_complete exit_complete].include?(reason)
+    Menu.main_menu if %i[menu_complete menu_saved].include?(reason)
+    Menu.show_save_files if reason == :load
+    nil if %i[exit_complete exit_saved].include?(reason)
+  end
 
   def win(winner)
-    puts winner
-    winner
+    print winner == 'Human' ? 'You win! ' : 'Computer wins! '
+    puts "The secret word was: #{@secret_word}"
+    puts 'Return to main menu? [y/n]: '
+    end_game(get_valid_input(/[yn]/).match?(/y/) ? :menu_complete : :exit_complete)
   end
 end

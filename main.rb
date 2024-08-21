@@ -1,5 +1,5 @@
-require_relative 'lib/game'
+require_relative 'lib/menu'
 
-# JM, 08/18/2024
+# JM, 08/21/2024
 
-Game.new
+Menu.main_menu
