@@ -40,14 +40,15 @@ class Game
   def display
     puts '  ' << @correct_parts.join(' ')
     puts "Incorrect letters: #{@incorrect_guesses.join(' ')} | Chances left: #{7 - @incorrect_guesses.length}"
-    print 'Guess a letter (Type .help to list commands): '
   end
 
   def player_input
+    print 'Guess a letter (Type .help to list commands): '
     while (input = gets.chomp)
       break if input.match?(/[a-zA-Z.]/) && !@incorrect_guesses.include?(input) && !@correct_parts.include?(input)
 
       delete_input
+      print 'Guess a letter (Type .help to list commands): '
     end
     return inputted_command(input) if input.start_with? '.'
 

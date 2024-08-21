@@ -16,7 +16,7 @@ class Menu
       next unless (page..(page + 9)).include?(idx)
 
       files << save_file.chomp
-      puts "[#{idx}] #{save_file.gsub('.yaml', '').chomp}"\
+      puts "[#{idx}] #{save_file.gsub('.yaml', '')}"\
       " | Saved: #{saved_time(save_file)}"
     end
 
